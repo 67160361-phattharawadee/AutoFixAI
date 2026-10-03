@@ -18,12 +18,8 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: STORE_NAME
-        sync: false
+        value: AutoFix
       - key: STORE_SHIPPING_FEE_THB
         value: "0"
       - key: STORE_TAX_POLICY
         value: included
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
