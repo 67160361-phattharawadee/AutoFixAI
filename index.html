@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AutoFix AI Automotive Parts Platform" />
+    <title>AutoFix | SmartFit AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <nav class="topbar">
+      <a class="brand" href="#home"><span class="brand-mark">AF</span><span>Auto<span class="accent">Fix</span><small>SMARTFIT AI</small></span></a>
+      <div class="desktop-nav">
+        <a href="#home">หน้าหลัก</a>
+        <a href="#garage">รถของฉัน</a>
+        <a href="#shop">อะไหล่ทั้งหมด</a>
+        <a href="#health">สุขภาพรถ</a>
+        <a href="#orders">คำสั่งซื้อ</a>
+        <a href="#admin" data-admin-nav hidden>จัดการร้าน</a>
+      </div>
+      <div class="nav-actions">
+        <button class="icon-button" data-action="cart">ตะกร้า <b id="cartCount">0</b></button>
+        <button class="user-button" data-action="auth">เข้าสู่ระบบ</button>
+        <button class="menu-button" data-action="menu">☰</button>
+      </div>
+      <div id="mobileNav" class="mobile-nav" hidden>
+        <a href="#home">หน้าหลัก</a>
+        <a href="#garage">รถของฉัน</a>
+        <a href="#shop">อะไหล่ทั้งหมด</a>
+        <a href="#health">สุขภาพรถ</a>
+        <a href="#orders">คำสั่งซื้อ</a>
+        <a href="#admin" data-admin-nav hidden>จัดการร้าน</a>
+      </div>
+    </nav>
+
+    <main id="app"></main>
+
+    <aside class="ai-chat" id="aiChat">
+      <button class="chat-toggle" data-action="chat"><span>✦</span><strong>AI</strong></button>
+      <div class="chat-panel" id="chatPanel" hidden>
+        <div class="chat-head">
+          <div><span class="eyebrow">AUTOFIX AI</span><h3>AI Mechanic</h3></div>
+          <button data-action="chat-close">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="message ai">สวัสดีครับ ผมช่วยค้นหาอะไหล่และอธิบายความเข้ากันได้เบื้องต้นได้ครับ<br><small>ข้อมูลนี้ไม่ใช่การวินิจฉัยจากช่างจริง หากอาการรุนแรงควรให้ช่างตรวจสอบ</small></div>
+        </div>
+        <div class="chat-suggestions">
+          <button data-chat="รถเบรกมีเสียง ควรเปลี่ยนอะไร">เบรกมีเสียง</button>
+          <button data-chat="ช่วยหาอะไหล่ตรงรุ่นให้หน่อย">หาอะไหล่ตรงรุ่น</button>
+        </div>
+        <form id="chatForm" class="chat-form">
+          <input id="chatInput" placeholder="ถามเรื่องรถหรืออะไหล่..." autocomplete="off" />
+          <button>ส่ง</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script src="ai-service.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
