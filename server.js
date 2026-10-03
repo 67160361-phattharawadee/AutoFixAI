@@ -390,7 +390,7 @@ app.post('/api/orders/checkout', requireAuth, asyncRoute(async (req, res) => {
   const order = await reserveOrder(req.body || {}, req.user.id, shipping.name);
   let session;
   try {
-    const baseUrl = String(process.env.PUBLIC_BASE_URL || 'http://localhost:8123').replace(/\/+$/, '');
+    const baseUrl = String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:8123').replace(/\/+$/, '');
     session = await stripe.checkout.sessions.create({
       mode: 'payment',
       client_reference_id: String(order.id),
@@ -455,8 +455,16 @@ app.post('/api/maintenance', requireAuth, asyncRoute(async (req, res) => {
 }));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const builtIndex = path.join(__dirname, 'dist', 'index.html');
+  res.sendFile(fs.existsSync(builtIndex) ? builtIndex : path.join(__dirname, 'index.html'));
 });
+
+for (const assetName of ['style.css', 'app.js', 'ai-service.js']) {
+  app.get(`/${assetName}`, (req, res) => {
+    const builtAsset = path.join(__dirname, 'dist', assetName);
+    res.sendFile(fs.existsSync(builtAsset) ? builtAsset : path.join(__dirname, assetName));
+  });
+}
 
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 

@@ -248,14 +248,16 @@ async function initializeDatabase() {
     );
   `);
 
-  const demoUser = await findUserByEmail('demo@autofix.com');
-  if (!demoUser) {
-    await createUser({
-      name: 'AutoFix Demo',
-      email: 'demo@autofix.com',
-      password: 'AutoFix123!',
-      phone: '0999999999'
-    });
+  if (process.env.NODE_ENV !== 'production') {
+    const demoUser = await findUserByEmail('demo@autofix.com');
+    if (!demoUser) {
+      await createUser({
+        name: 'AutoFix Demo',
+        email: 'demo@autofix.com',
+        password: 'AutoFix123!',
+        phone: '0999999999'
+      });
+    }
   }
 
   const products = await all('SELECT id FROM products');
@@ -488,6 +490,7 @@ async function getStoreSettings() {
   const shippingFeeThb = configuredShipping == null || configuredShipping === '' ? null : Number(configuredShipping);
   const taxPolicy = configuredTaxPolicy || null;
   return {
+    storeName: String(process.env.STORE_NAME || '').trim() || 'AutoFix',
     shippingFeeThb,
     taxPolicy,
     configured: Number.isInteger(shippingFeeThb) && ['included', 'not_applicable'].includes(taxPolicy)

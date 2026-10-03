@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY . .
-RUN npm run check
+RUN npm run check && npm run build
 
 EXPOSE 3001
 

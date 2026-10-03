@@ -97,6 +97,7 @@ function productCard(product) {
     <div class="product-body">
       <span class="product-type">${esc(product.brand)} · ${esc(product.category)}</span>
       <h3>${esc(product.name)}</h3>
+      <span class="muted">ร้าน ${esc(state.storeConfig?.storeName || 'AutoFix')}</span><br>
       <span class="muted" style="font-size:11px">Part Number: ${esc(product.partNumber)}</span><br>
       <span class="rating">★ ${product.rating} <i class="muted">(${product.reviews})</i></span>
       <div class="price">${money(product.price)}</div>

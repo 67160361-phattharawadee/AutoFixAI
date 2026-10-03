@@ -19,11 +19,14 @@ test('HTTP API protects admin inventory and fails closed when Stripe is not conf
     cwd: path.join(__dirname, '..'),
     env: {
       ...process.env,
+      NODE_ENV: 'production',
       AUTOFIX_DB_DIR: databaseDir,
       PORT: String(port),
       SESSION_SECRET: 'integration-test-session-secret-at-least-32-chars',
       ADMIN_EMAIL: 'owner@example.com',
       ADMIN_PASSWORD: 'A-private-integration-password-829!',
+      STRIPE_SECRET_KEY: '',
+      STRIPE_WEBHOOK_SECRET: '',
       STORE_SHIPPING_FEE_THB: '',
       STORE_TAX_POLICY: ''
     },
@@ -56,10 +59,20 @@ test('HTTP API protects admin inventory and fails closed when Stripe is not conf
     assert.equal(adminLogin.status, 200);
     const admin = await adminLogin.json();
     assert.equal(admin.user.role, 'admin');
+    const demoLogin = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'demo@autofix.com', password: 'AutoFix123!' })
+    });
+    assert.equal(demoLogin.status, 401);
+    assert.equal((await fetch(baseUrl)).status, 200);
+    assert.equal((await fetch(`${baseUrl}/app.js`)).status, 200);
     const adminHeaders = { Authorization: `Bearer ${admin.token}`, 'Content-Type': 'application/json' };
 
     const initialStoreConfig = await (await fetch(`${baseUrl}/api/storefront/config`)).json();
     assert.equal(initialStoreConfig.configured, false);
+    assert.equal(typeof initialStoreConfig.storeName, 'string');
+    assert.ok(initialStoreConfig.storeName.length > 0);
     const storeSettingsResponse = await fetch(`${baseUrl}/api/admin/store-settings`, {
       method: 'PUT',
       headers: adminHeaders,
