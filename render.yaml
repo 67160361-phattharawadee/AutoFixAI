@@ -2,16 +2,12 @@ services:
   - type: web
     name: autofixai-store
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
     dockerfilePath: ./api.Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
     autoDeployTrigger: commit
-    disk:
-      name: autofixai-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production

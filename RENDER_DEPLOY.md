@@ -1,6 +1,6 @@
 # Deploy on Render
 
-This project deploys as one Docker web service. The service serves the customer storefront, admin interface, and API from one HTTPS origin. SQLite data is stored on a persistent disk mounted at `/app/data`.
+This project deploys as one Docker web service. The service serves the customer storefront, admin interface, and API from one HTTPS origin. The Blueprint uses Render's Free compute plan and does not attach persistent storage.
 
 ## Setup
 
@@ -12,6 +12,6 @@ This project deploys as one Docker web service. The service serves the customer 
 6. In Stripe, add a webhook endpoint at `https://<your-render-domain>/api/payments/stripe/webhook` and subscribe to `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`. Copy the endpoint signing secret to `STRIPE_WEBHOOK_SECRET` in Render and redeploy.
 7. Open the Render domain to use the storefront. Sign in with the configured administrator account and set the store shipping/tax policy before accepting orders.
 
-The Blueprint uses a paid Render web-service plan because SQLite needs a persistent disk. The persistent disk is required to retain products, users, and orders across deploys and restarts. Confirm current Render pricing before creating the service.
+This Free deployment is for preview/testing only. Render's free filesystem is ephemeral, so SQLite products, users, and orders can be lost whenever the service restarts, sleeps, or redeploys. Do not accept real orders until you upgrade to a paid service and attach a persistent disk, or migrate the database to persistent managed storage.
 
 Render supplies `RENDER_EXTERNAL_URL`; the app uses it for Stripe success and cancellation redirects when `PUBLIC_BASE_URL` is not set.
