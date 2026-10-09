@@ -1,5 +1,5 @@
 # AutoFixAI
-
+https://autofixai-store-ld50.onrender.com
 ## Run with Docker Desktop
 
 Copy `.env.example` to `.env` once, then set a random `SESSION_SECRET`, your Stripe secret key, Stripe webhook secret, and a private admin email/password (at least 12 characters). Keep `.env` private; never send these keys in chat or commit the file.
