@@ -16,7 +16,7 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: #07131d;
+  background: var(--ink);
   color: var(--text);
   font-family: 'Kanit', sans-serif;
   line-height: 1.55;
@@ -157,8 +157,8 @@ img { max-width: 100%; display: block; }
   border-radius: 12px;
 }
 .button {
-  background: linear-gradient(135deg, var(--mint), #30d0b3);
-  color: #061a1e;
+  background: linear-gradient(135deg, var(--yellow), #f5a623);
+  color: #1d1300;
   border: none;
   border-radius: 12px;
   padding: 12px 16px;
@@ -483,6 +483,31 @@ img { max-width: 100%; display: block; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 .loading-dots::after { content: '...'; }
+.student-info { color: var(--mint); font-weight: 500; margin: 6px 0 0; }
+.welcome { margin-top: 4px; }
+.about { display: grid; gap: 18px; }
+.skill-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; list-style: none; }
+.skill-list li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
+
+[data-theme="light"] {
+  --ink: #f3f7f6;
+  --panel: #ffffff;
+  --panel-2: #e8f0ee;
+  --line: rgba(7, 19, 29, 0.14);
+  --text: #0c1f26;
+  --muted: #4f6668;
+  --mint: #0f8f6b;
+  --yellow: #b7791f;
+}
+[data-theme="light"] .topbar { background: rgba(243, 247, 246, 0.9); }
+[data-theme="light"] .vehicle-bar, [data-theme="light"] .ai-banner, [data-theme="light"] .panel, [data-theme="light"] .product-card,
+[data-theme="light"] .modal, [data-theme="light"] .score-card, [data-theme="light"] .result-row, [data-theme="light"] .result-list,
+[data-theme="light"] .chat-panel, [data-theme="light"] .toast { background: var(--panel); }
+[data-theme="light"] .search-box input, [data-theme="light"] .field input, [data-theme="light"] .field select,
+[data-theme="light"] textarea, [data-theme="light"] #chatInput { background: var(--panel-2); }
+[data-theme="light"] .scan-frame { background: linear-gradient(180deg, #ffffff, #e8f0ee); }
+[data-theme="light"] .button { color: #fff; }
+
 @media (max-width: 780px) {
   .topbar { gap: 8px; padding-right: 12px; padding-left: 12px; }
   .desktop-nav { display: none; }

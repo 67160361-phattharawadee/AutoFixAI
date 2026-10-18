@@ -122,7 +122,9 @@ function home() {
   return `<section class="hero">
     <div>
       <span class="eyebrow">AUTOFIX / SMARTFIT AI</span>
-      <h1>ซื้ออะไหล่ให้ตรงรุ่น<br /><em>ให้ AI ช่วยคุณ</em></h1>
+      <h1>หาอะไหล่ตรงรุ่นง่ายกว่าเดิม<br /><em>ด้วย AutoFix AI</em></h1>
+      <p class="student-info">ชื่อ: Phattharawadee Chokwisitkul | รหัสนิสิต: 67160361</p>
+      <p class="welcome">ยินดีต้อนรับสู่ AutoFix ร้านอะไหล่รถยนต์ออนไลน์ที่มี AI ช่วยเลือกของให้ตรงกับรถของคุณ</p>
       <p>ไม่ต้องรู้ชื่ออะไหล่ ไม่ต้องกลัวซื้อผิดรุ่น บอกอาการรถหรือค้นหาสินค้า แล้วให้ SmartFit AI ช่วยเลือกให้</p>
       <form class="search-box" id="searchForm">
         <input id="mainSearch" placeholder="ค้นหาอะไหล่ หรือบอกอาการรถ..." />
@@ -278,6 +280,28 @@ function imageModal() {
   return `<div class="modal-backdrop" data-close-modal><div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><div><span class="eyebrow">VISION AI / DEMO MODE</span><h2>📷 วิเคราะห์รูปอะไหล่</h2><p class="muted">อัปโหลดภาพอะไหล่เพื่อค้นหาสินค้าที่ใกล้เคียง</p></div><button class="close" data-action="close-modal">×</button></div><div class="field"><label>ไฟล์รูปภาพ (สูงสุด 5MB)</label><input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" /></div><div id="imageResult"></div></div></div>`;
 }
 
+function aboutPage() {
+  const skills = ['HTML / CSS / JavaScript', 'Node.js + Express', 'SQLite', 'Stripe Checkout', 'Docker', 'Git + GitHub Actions'];
+  return `<div class="page about">
+    <section class="panel">
+      <span class="eyebrow">ABOUT ME</span>
+      <h1>Phattharawadee Chokwisitkul</h1>
+      <p>รหัสนิสิต 67160361 ผู้พัฒนาโปรเจกต์ AutoFix ร้านขายอะไหล่รถยนต์ออนไลน์ที่ใช้ AI ช่วยแนะนำอะไหล่ให้ตรงรุ่นรถ หน้าเว็บนี้ deploy อัตโนมัติด้วย GitHub Actions ไปยัง GitHub Pages</p>
+    </section>
+    <section class="panel">
+      <span class="eyebrow">SKILLS</span>
+      <h2>ทักษะที่ใช้ในโปรเจกต์</h2>
+      <ul class="skill-list">${skills.map((skill) => `<li>${skill}</li>`).join('')}</ul>
+    </section>
+    <section class="panel">
+      <span class="eyebrow">CONTACT</span>
+      <h2>ติดต่อ</h2>
+      <p>GitHub: <a class="accent" href="https://github.com/67160361-phattharawadee" target="_blank" rel="noopener">github.com/67160361-phattharawadee</a></p>
+      <p>Repository: <a class="accent" href="https://github.com/67160361-phattharawadee/AutoFixAI" target="_blank" rel="noopener">AutoFixAI</a></p>
+    </section>
+  </div>`;
+}
+
 function render() {
   const root = document.getElementById('app');
   const hash = location.hash || '#home';
@@ -287,6 +311,7 @@ function render() {
   else if (hash === '#health') root.innerHTML = healthPage();
   else if (hash === '#orders') root.innerHTML = orderHistory();
   else if (hash === '#admin') root.innerHTML = adminPage();
+  else if (hash === '#about') root.innerHTML = aboutPage();
   else root.innerHTML = home();
 
   if (hash === '#admin' && state.user?.role === 'admin' && state.adminOrders === null) loadAdminData();
@@ -390,6 +415,7 @@ function bind() {
 }
 
 function actions(action, el) {
+  if (action === 'theme') toggleTheme();
   if (action === 'finder') openModal(finderModal());
   if (action === 'retry-products') loadProducts();
   if (action === 'image') openModal(imageModal());
@@ -684,7 +710,7 @@ async function login(e) {
   const data = Object.fromEntries(new FormData(form));
 
   try {
-    const response = await fetch(`/api/auth/${mode === 'register' ? 'register' : 'login'}`, {
+    const response = await fetch(`${API_BASE}/api/auth/${mode === 'register' ? 'register' : 'login'}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -735,8 +761,20 @@ async function sendChat(e) {
   messages.scrollTop = messages.scrollHeight;
 }
 
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('[data-action="theme"]').textContent = theme === 'light' ? '☾ Dark' : '☀ Light';
+}
+
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('autofix-theme', next);
+  applyTheme(next);
+}
+
 window.addEventListener('hashchange', render);
 document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(localStorage.getItem('autofix-theme') || 'dark');
   render();
   const userButton = document.querySelector('.user-button');
   userButton.textContent = state.user ? `สวัสดี ${state.user.name} · ออกจากระบบ` : 'เข้าสู่ระบบ';
