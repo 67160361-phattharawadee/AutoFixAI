@@ -124,6 +124,7 @@ function home() {
       <span class="eyebrow">AUTOFIX / SMARTFIT AI</span>
       <h1>หาอะไหล่ตรงรุ่นง่ายกว่าเดิม<br /><em>ด้วย AutoFix AI</em></h1>
       <p class="student-info">ชื่อ: Phattharawadee Chokwisitkul | รหัสนิสิต: 67160361</p>
+      <p class="student-info">ชื่อ: ภาณัฏฐ์ศญา โชติ | รหัสนิสิต: 67160173</p>
       <p class="welcome">ยินดีต้อนรับสู่ AutoFix ร้านอะไหล่รถยนต์ออนไลน์ที่มี AI ช่วยเลือกของให้ตรงกับรถของคุณ</p>
       <p>ไม่ต้องรู้ชื่ออะไหล่ ไม่ต้องกลัวซื้อผิดรุ่น บอกอาการรถหรือค้นหาสินค้า แล้วให้ SmartFit AI ช่วยเลือกให้</p>
       <form class="search-box" id="searchForm">
@@ -285,8 +286,12 @@ function aboutPage() {
   return `<div class="page about">
     <section class="panel">
       <span class="eyebrow">ABOUT ME</span>
-      <h1>Phattharawadee Chokwisitkul</h1>
-      <p>รหัสนิสิต 67160361 ผู้พัฒนาโปรเจกต์ AutoFix ร้านขายอะไหล่รถยนต์ออนไลน์ที่ใช้ AI ช่วยแนะนำอะไหล่ให้ตรงรุ่นรถ หน้าเว็บนี้ deploy อัตโนมัติด้วย GitHub Actions ไปยัง GitHub Pages</p>
+      <h1>ผู้จัดทำ</h1>
+      <ul class="member-list">
+        <li><strong>Phattharawadee Chokwisitkul</strong> · รหัสนิสิต 67160361</li>
+        <li><strong>ภาณัฏฐ์ศญา โชติ</strong> · รหัสนิสิต 67160173</li>
+      </ul>
+      <p>ผู้พัฒนาโปรเจกต์ AutoFix ร้านขายอะไหล่รถยนต์ออนไลน์ที่ใช้ AI ช่วยแนะนำอะไหล่ให้ตรงรุ่นรถ หน้าเว็บนี้ deploy อัตโนมัติด้วย GitHub Actions ไปยัง GitHub Pages</p>
     </section>
     <section class="panel">
       <span class="eyebrow">SKILLS</span>

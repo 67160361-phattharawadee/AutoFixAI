@@ -485,6 +485,7 @@ img { max-width: 100%; display: block; }
 .loading-dots::after { content: '...'; }
 .student-info { color: var(--mint); font-weight: 500; margin: 6px 0 0; }
 .welcome { margin-top: 4px; }
+.member-list { padding-left: 20px; }
 .about { display: grid; gap: 18px; }
 .skill-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; list-style: none; }
 .skill-list li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
