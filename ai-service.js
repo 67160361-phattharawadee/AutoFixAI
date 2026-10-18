@@ -1,7 +1,10 @@
+// GitHub Pages serves only static files, so the API lives on Render there
+const API_BASE = location.hostname.endsWith('github.io') ? 'https://autofixai-store-ld50.onrender.com' : '';
+
 const AutoFixAI = (() => {
   async function request(url, options = {}) {
     const token = localStorage.getItem('autofix-token');
-    const response = await fetch(url, {
+    const response = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers: {
         ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),

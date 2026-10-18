@@ -148,6 +148,18 @@ app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' 
   return res.json({ received: true });
 }));
 
+const CORS_ORIGINS = ['https://67160361-phattharawadee.github.io'];
+app.use((req, res, next) => {
+  if (CORS_ORIGINS.includes(req.headers.origin)) {
+    res.set('Access-Control-Allow-Origin', req.headers.origin);
+    res.set('Vary', 'Origin');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '7mb' }));
 
 for (const file of ['style.css', 'app.js', 'ai-service.js']) {
