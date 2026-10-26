@@ -58,9 +58,6 @@ function storeStatusNotice() {
   if (!availableProducts) {
     return '<div class="store-notice" role="status"><strong>ยังสั่งซื้อไม่ได้: สินค้าทุกชิ้นหมดสต็อก</strong><span>ผู้ดูแลร้านต้องใส่จำนวนสินค้าคงเหลือจริงในหน้า “จัดการร้าน” ก่อน ระบบจะเปิดปุ่มใส่รถเข็นให้</span></div>';
   }
-  if (state.paymentsEnabled === false) {
-    return '<div class="store-notice" role="status"><strong>ยังไม่ได้เปิดระบบชำระเงิน</strong><span>ต้องตั้งค่า Stripe secret key และ webhook secret ในไฟล์ .env แล้วเริ่มระบบใหม่</span></div>';
-  }
   if (state.storeConfig?.configured !== true) {
     return '<div class="store-notice" role="status"><strong>ร้านยังตั้งค่าการจัดส่งไม่ครบ</strong><span>ผู้ดูแลร้านต้องกำหนดค่าส่งและยืนยันนโยบายภาษีในหน้า “จัดการร้าน” ก่อนรับคำสั่งซื้อ</span></div>';
   }
@@ -183,15 +180,15 @@ function garage() {
 
 function orderHistory() {
   if (!state.user) return `<div class="page"><h1>คำสั่งซื้อของฉัน</h1><div class="empty">เข้าสู่ระบบเพื่อดูประวัติคำสั่งซื้อ <button class="button" data-action="auth">เข้าสู่ระบบ</button></div></div>`;
-  const statusText = { pending_payment: 'รอชำระเงิน', paid: 'ชำระเงินแล้ว', processing: 'กำลังเตรียมสินค้า', shipped: 'จัดส่งแล้ว', completed: 'สำเร็จ', cancelled: 'ยกเลิก', expired: 'หมดเวลาชำระ', payment_failed: 'ชำระไม่สำเร็จ', legacy_unverified: 'รายการเดิมที่ยังไม่ยืนยัน' };
-  return `<div class="page"><div class="section-head"><div><span class="eyebrow">ORDER HISTORY</span><h1>คำสั่งซื้อของฉัน</h1></div><button class="button secondary" data-action="refresh-orders">รีเฟรชสถานะ</button></div>${state.orders.length ? `<div class="result-list">${state.orders.map((order) => `<article class="result-row"><div><strong>คำสั่งซื้อ #${esc(order.id)}</strong><small class="muted">${esc(order.createdAt || order.date || 'บันทึกแล้ว')} · ${esc(statusText[order.status] || 'ไม่ทราบสถานะ')}</small><div class="muted">${order.items.map((item) => `${esc(item.name)} × ${item.quantity}`).join(', ')}</div></div><strong>${money(order.total)}</strong></article>`).join('')}</div>` : '<div class="empty">ยังไม่มีคำสั่งซื้อ</div>'}</div>`;
+  const statusText = { pending_payment: 'รอชำระเงิน', cod_pending: 'เก็บเงินปลายทาง · รอจัดส่ง', paid: 'ชำระเงินแล้ว', processing: 'กำลังเตรียมสินค้า', shipped: 'จัดส่งแล้ว', completed: 'สำเร็จ', cancelled: 'ยกเลิก', expired: 'หมดเวลาชำระ', payment_failed: 'ชำระไม่สำเร็จ', legacy_unverified: 'รายการเดิมที่ยังไม่ยืนยัน' };
+  return `<div class="page"><div class="section-head"><div><span class="eyebrow">ORDER HISTORY</span><h1>คำสั่งซื้อของฉัน</h1></div><button class="button secondary" data-action="refresh-orders">รีเฟรชสถานะ</button></div>${state.orders.length ? `<div class="result-list">${state.orders.map((order) => `<article class="result-row"><div><strong>คำสั่งซื้อ #${esc(order.id)}</strong><small class="muted">${esc(order.createdAt || order.date || 'บันทึกแล้ว')} · ${esc(statusText[order.status] || 'ไม่ทราบสถานะ')}</small><div class="muted">${order.items.map((item) => `${esc(item.name)} × ${item.quantity}`).join(', ')}</div>${order.status === 'cod_pending' ? `<button class="button secondary" data-action="cancel-cod" data-order-id="${order.id}" style="margin-top:8px">ยกเลิกคำสั่งซื้อ</button>` : ''}</div><strong>${money(order.total)}</strong></article>`).join('')}</div>` : '<div class="empty">ยังไม่มีคำสั่งซื้อ</div>'}</div>`;
 }
 
 function adminPage() {
   if (state.user?.role !== 'admin') return `<div class="page"><h1>จัดการร้าน</h1><div class="empty">หน้านี้สำหรับบัญชีผู้ดูแลร้านเท่านั้น</div></div>`;
   if (state.adminOrders === null || !state.adminStoreSettings) return '<div class="page empty">กำลังโหลดข้อมูลร้าน...</div>';
-  const nextStatus = { paid: 'processing', processing: 'shipped', shipped: 'completed' };
-  const statusText = { pending_payment: 'รอชำระเงิน', paid: 'ชำระเงินแล้ว', processing: 'กำลังเตรียมสินค้า', shipped: 'จัดส่งแล้ว', completed: 'สำเร็จ', cancelled: 'ยกเลิก', expired: 'หมดเวลาชำระ', payment_failed: 'ชำระไม่สำเร็จ', legacy_unverified: 'รายการเดิมที่ยังไม่ยืนยัน' };
+  const nextStatus = { paid: 'processing', cod_pending: 'processing', processing: 'shipped', shipped: 'completed' };
+  const statusText = { pending_payment: 'รอชำระเงิน', cod_pending: 'เก็บเงินปลายทาง · รอจัดส่ง', paid: 'ชำระเงินแล้ว', processing: 'กำลังเตรียมสินค้า', shipped: 'จัดส่งแล้ว', completed: 'สำเร็จ', cancelled: 'ยกเลิก', expired: 'หมดเวลาชำระ', payment_failed: 'ชำระไม่สำเร็จ', legacy_unverified: 'รายการเดิมที่ยังไม่ยืนยัน' };
   const settings = state.adminStoreSettings;
   return `<div class="page">
     <div class="section-head"><div><span class="eyebrow">STORE ADMIN</span><h1>จัดการร้าน</h1></div><button class="button secondary" data-action="refresh-admin">รีเฟรช</button></div>
@@ -202,7 +199,7 @@ function adminPage() {
       <div class="field full"><button class="button">บันทึกนโยบายร้าน</button><span class="muted">ภาษีไม่ได้คำนวณแยกโดยระบบ; ให้ตรวจสอบกับผู้ทำบัญชี/ข้อกำหนดที่เกี่ยวข้อง</span></div>
     </form><p class="fit ${settings.configured ? 'good' : 'warn'}">${settings.configured ? `ตั้งค่าแล้ว · ค่าส่ง ${money(settings.shippingFeeThb)} · ${settings.taxPolicy === 'included' ? 'ภาษีรวมในราคาสินค้า' : 'ไม่มีภาษีที่ต้องคิดเพิ่มตามที่ร้านยืนยัน'}` : 'ยังไม่พร้อมรับคำสั่งซื้อ'}</p></section>
     <section class="admin-section"><div class="section-head"><div><h2>สินค้าและสต็อก</h2><p class="muted">จำนวนนี้คือสินค้าพร้อมขาย หลังหักรายการที่กำลังรอชำระ</p></div><button class="button" data-action="product-add">+ เพิ่มสินค้า</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>สินค้า</th><th>ราคา (บาท)</th><th>พร้อมขาย</th><th></th></tr></thead><tbody>${state.adminProducts.map((product) => `<tr><td><strong>${esc(product.name)}</strong><small>${esc(product.brand)} · ${esc(product.partNumber || '')} · ${esc(product.category || '')}</small></td><td><input type="number" min="0.01" step="0.01" value="${product.price}" data-product-price="${product.id}" aria-label="ราคา ${esc(product.name)}" /></td><td><input type="number" min="0" max="1000000" value="${product.stockQuantity}" data-stock-value="${product.id}" aria-label="จำนวนพร้อมขาย ${esc(product.name)}" /></td><td><button class="button secondary" data-product-save="${product.id}">บันทึก</button></td></tr>`).join('')}</tbody></table></div></section>
-    <section class="admin-section"><h2>คำสั่งซื้อและการจัดส่ง</h2>${state.adminOrders.length ? `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>ผู้รับ/ที่อยู่</th><th>รายการ</th><th>ยอด</th><th>สถานะ</th><th></th></tr></thead><tbody>${state.adminOrders.map((order) => `<tr><td>#${esc(order.id)}<small>${esc(order.createdAt)}</small></td><td>${esc(order.shipping?.name || order.userName)}<small>${esc(order.shipping?.phone || '')}</small><small>${esc(order.shipping?.address || '')} ${esc(order.shipping?.city || '')} ${esc(order.shipping?.province || '')} ${esc(order.shipping?.postalCode || '')}</small></td><td>${order.items.map((item) => `${esc(item.name)} × ${item.quantity}`).join('<br>')}<small>ค่าส่ง ${money(order.shippingFeeThb || 0)}</small></td><td>${money(order.total)}</td><td>${esc(statusText[order.status] || order.status)}</td><td>${nextStatus[order.status] ? `<button class="button secondary" data-order-id="${order.id}" data-order-status="${nextStatus[order.status]}">${nextStatus[order.status] === 'processing' ? 'เริ่มเตรียม' : nextStatus[order.status] === 'shipped' ? 'ทำเครื่องหมายจัดส่ง' : 'ปิดคำสั่งซื้อ'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">ยังไม่มีคำสั่งซื้อ</div>'}</section>
+    <section class="admin-section"><h2>คำสั่งซื้อและการจัดส่ง</h2>${state.adminOrders.length ? `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>ผู้รับ/ที่อยู่</th><th>รายการ</th><th>ยอด</th><th>สถานะ</th><th></th></tr></thead><tbody>${state.adminOrders.map((order) => `<tr><td>#${esc(order.id)}<small>${esc(order.createdAt)}</small></td><td>${esc(order.shipping?.name || order.userName)}<small>${esc(order.shipping?.phone || '')}</small><small>${esc(order.shipping?.address || '')} ${esc(order.shipping?.city || '')} ${esc(order.shipping?.province || '')} ${esc(order.shipping?.postalCode || '')}</small></td><td>${order.items.map((item) => `${esc(item.name)} × ${item.quantity}`).join('<br>')}<small>ค่าส่ง ${money(order.shippingFeeThb || 0)}</small></td><td>${money(order.total)}<small>${order.paymentMethod === 'cod' ? 'เก็บเงินปลายทาง' : 'Stripe'}</small></td><td>${esc(statusText[order.status] || order.status)}</td><td>${nextStatus[order.status] ? `<button class="button secondary" data-order-id="${order.id}" data-order-status="${nextStatus[order.status]}">${nextStatus[order.status] === 'processing' ? 'เริ่มเตรียม' : nextStatus[order.status] === 'shipped' ? 'ทำเครื่องหมายจัดส่ง' : 'ปิดคำสั่งซื้อ'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">ยังไม่มีคำสั่งซื้อ</div>'}</section>
   </div>`;
 }
 
@@ -251,7 +248,7 @@ function cartModal() {
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const shippingFee = Number(state.storeConfig?.shippingFeeThb || 0);
   const total = subtotal + shippingFee;
-  const checkoutReady = state.storeConfig?.configured && state.storeConfig?.paymentsEnabled;
+  const checkoutReady = state.storeConfig?.configured;
 
   return `<div class="modal-backdrop" data-close-modal><div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><div><span class="eyebrow">YOUR CART</span><h2>รถเข็นของคุณ</h2></div><button class="close" data-action="close-modal">×</button></div>${items.length ? `<div class="result-list">${items.map((item) => `<div class="result-row"><span>${esc(item.product.name)} × ${item.quantity}</span><strong>${money(item.product.price * item.quantity)}</strong></div>`).join('')}<div class="result-row"><span>ค่าจัดส่ง</span><strong>${state.storeConfig?.configured ? money(shippingFee) : 'ยังไม่ได้ตั้งค่า'}</strong></div></div><div class="section-head"><strong>ยอดรวม</strong><strong class="price">${money(total)}</strong></div>${checkoutReady ? '<button class="button" data-action="checkout">ดำเนินการสั่งซื้อ</button>' : storeStatusNotice()}` : '<div class="empty">รถเข็นยังว่าง</div>'}</div></div>`;
 }
@@ -259,7 +256,8 @@ function cartModal() {
 function checkoutModal() {
   const subtotal = state.cart.reduce((sum, item) => sum + (PRODUCTS.find((product) => product.id === item.id)?.price || 0) * item.quantity, 0);
   const shippingFee = Number(state.storeConfig?.shippingFeeThb || 0);
-  return `<div class="modal-backdrop" data-close-modal><div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><div><span class="eyebrow">SECURE CHECKOUT</span><h2>ที่อยู่จัดส่ง</h2><p class="muted">การชำระเงินดำเนินการบนหน้า Stripe ที่ปลอดภัย</p></div><button class="close" data-action="close-modal">×</button></div><div class="result-list"><div class="result-row"><span>สินค้า</span><strong>${money(subtotal)}</strong></div><div class="result-row"><span>ค่าจัดส่ง</span><strong>${money(shippingFee)}</strong></div><div class="result-row"><strong>ยอดรวม</strong><strong>${money(subtotal + shippingFee)}</strong></div><p class="muted">${state.storeConfig.taxPolicy === 'included' ? 'ร้านยืนยันว่าภาษีรวมในราคาสินค้าแล้ว' : 'ร้านยืนยันว่าไม่มีภาษีที่ต้องคิดเพิ่ม'}</p></div><form id="checkoutForm" class="form-grid"><div class="field"><label>ชื่อผู้รับ</label><input name="name" value="${esc(state.user?.name || '')}" autocomplete="name" required /></div><div class="field"><label>อีเมล</label><input name="email" type="email" value="${esc(state.user?.email || '')}" autocomplete="email" required /></div><div class="field full"><label>เบอร์โทรศัพท์</label><input name="phone" type="tel" autocomplete="tel" required /></div><div class="field full"><label>ที่อยู่</label><textarea name="address" rows="3" autocomplete="street-address" required></textarea></div><div class="field"><label>เขต/อำเภอ</label><input name="city" autocomplete="address-level2" required /></div><div class="field"><label>จังหวัด</label><input name="province" autocomplete="address-level1" required /></div><div class="field"><label>รหัสไปรษณีย์</label><input name="postalCode" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code" required /></div><div class="field full"><button class="button" type="submit">ไปชำระเงิน</button></div></form></div></div>`;
+  const stripeReady = Boolean(state.storeConfig?.paymentsEnabled);
+  return `<div class="modal-backdrop" data-close-modal><div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><div><span class="eyebrow">SECURE CHECKOUT</span><h2>ที่อยู่จัดส่ง</h2><p class="muted">เลือกจ่ายออนไลน์ผ่าน Stripe หรือเก็บเงินปลายทาง</p></div><button class="close" data-action="close-modal">×</button></div><div class="result-list"><div class="result-row"><span>สินค้า</span><strong>${money(subtotal)}</strong></div><div class="result-row"><span>ค่าจัดส่ง</span><strong>${money(shippingFee)}</strong></div><div class="result-row"><strong>ยอดรวม</strong><strong>${money(subtotal + shippingFee)}</strong></div><p class="muted">${state.storeConfig.taxPolicy === 'included' ? 'ร้านยืนยันว่าภาษีรวมในราคาสินค้าแล้ว' : 'ร้านยืนยันว่าไม่มีภาษีที่ต้องคิดเพิ่ม'}</p></div><form id="checkoutForm" class="form-grid"><div class="field"><label>ชื่อผู้รับ</label><input name="name" value="${esc(state.user?.name || '')}" autocomplete="name" required /></div><div class="field"><label>อีเมล</label><input name="email" type="email" value="${esc(state.user?.email || '')}" autocomplete="email" required /></div><div class="field full"><label>เบอร์โทรศัพท์</label><input name="phone" type="tel" autocomplete="tel" required /></div><div class="field full"><label>ที่อยู่</label><textarea name="address" rows="3" autocomplete="street-address" required></textarea></div><div class="field"><label>เขต/อำเภอ</label><input name="city" autocomplete="address-level2" required /></div><div class="field"><label>จังหวัด</label><input name="province" autocomplete="address-level1" required /></div><div class="field"><label>รหัสไปรษณีย์</label><input name="postalCode" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code" required /></div><fieldset class="field full payment-methods"><legend>วิธีชำระเงิน</legend><label class="payment-option"><input type="radio" name="paymentMethod" value="cod" ${stripeReady ? '' : 'checked'} /><span><strong>เก็บเงินปลายทาง (COD)</strong><small class="muted">จ่ายเงินสดกับพนักงานส่งของเมื่อได้รับสินค้า</small></span></label><label class="payment-option"><input type="radio" name="paymentMethod" value="stripe" ${stripeReady ? 'checked' : 'disabled'} /><span><strong>บัตรเครดิต/เดบิต (Stripe)</strong><small class="muted">${stripeReady ? 'ชำระบนหน้า Stripe ที่ปลอดภัย' : 'ยังไม่เปิดใช้งาน — ร้านยังไม่ได้ตั้งค่า Stripe'}</small></span></label></fieldset><div class="field full"><button class="button" type="submit">${stripeReady ? 'ไปชำระเงิน' : 'ยืนยันคำสั่งซื้อ'}</button></div></form></div></div>`;
 }
 
 function authModal(mode = 'login') {
@@ -448,6 +446,16 @@ function actions(action, el) {
   }
   if (action === 'product-add') openModal(productCreateModal());
   if (action === 'product-add') openModal(productCreateModal());
+  if (action === 'cancel-cod') {
+    AutoFixAI.cancelCheckout(el.dataset.orderId)
+      .then(() => AutoFixAI.listOrders())
+      .then((orders) => {
+        state.orders = orders;
+        save();
+        render();
+        toast('ยกเลิกคำสั่งซื้อแล้ว');
+      }).catch((error) => toast(error.message || 'ยกเลิกคำสั่งซื้อไม่สำเร็จ'));
+  }
   if (action === 'refresh-orders') {
     AutoFixAI.listOrders().then((orders) => {
       state.orders = orders;
@@ -590,16 +598,27 @@ async function saveMaintenance(e) {
 
 async function startCheckout(e) {
   e.preventDefault();
-  const shipping = Object.fromEntries(new FormData(e.currentTarget));
+  const { paymentMethod = 'cod', ...shipping } = Object.fromEntries(new FormData(e.currentTarget));
   const submitButton = e.currentTarget.querySelector('button[type="submit"]');
+  const buttonText = submitButton.textContent;
   submitButton.disabled = true;
-  submitButton.textContent = 'กำลังเตรียมการชำระเงิน...';
+  submitButton.textContent = paymentMethod === 'cod' ? 'กำลังยืนยันคำสั่งซื้อ...' : 'กำลังเตรียมการชำระเงิน...';
   try {
-    const checkout = await AutoFixAI.createCheckout(state.cart, shipping);
-    window.location.assign(checkout.checkoutUrl);
+    const checkout = await AutoFixAI.createCheckout(state.cart, shipping, paymentMethod, `${location.origin}${location.pathname}`);
+    if (paymentMethod === 'stripe') {
+      window.location.assign(checkout.checkoutUrl);
+      return;
+    }
+    state.cart = [];
+    state.orders = await AutoFixAI.listOrders();
+    save();
+    document.querySelector('.modal-backdrop')?.remove();
+    location.hash = '#orders';
+    render();
+    toast(`สั่งซื้อสำเร็จ #${checkout.id} ชำระเงินปลายทางเมื่อได้รับสินค้า`);
   } catch (error) {
     submitButton.disabled = false;
-    submitButton.textContent = 'ไปชำระเงิน';
+    submitButton.textContent = buttonText;
     toast(error.message || 'เริ่มชำระเงินไม่สำเร็จ');
   }
 }
@@ -712,7 +731,7 @@ async function handlePaymentReturn() {
     }
     state.orders = await AutoFixAI.listOrders();
     save();
-    history.replaceState({}, '', '/#orders');
+    history.replaceState({}, '', `${location.pathname}#orders`);
     render();
   } catch (error) {
     toast(error.message || 'ตรวจสอบสถานะการชำระเงินไม่สำเร็จ');

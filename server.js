@@ -206,7 +206,7 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/storefront/config', asyncRoute(async (req, res) => {
   const storeSettings = await getStoreSettings();
-  res.json({ ...storeSettings, paymentsEnabled: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET) });
+  res.json({ ...storeSettings, paymentsEnabled: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET), codEnabled: true });
 }));
 
 app.get('/api/products', asyncRoute(async (req, res) => {
@@ -396,13 +396,30 @@ app.get('/api/orders/:id', requireAuth, asyncRoute(async (req, res) => {
   return res.json(order);
 }));
 
+// Send shoppers back to the page they came from (GitHub Pages or this server), never an arbitrary site
+function paymentReturnUrl(requested) {
+  const fallback = String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:8123').replace(/\/+$/, '');
+  try {
+    const url = new URL(String(requested || ''));
+    if (CORS_ORIGINS.includes(url.origin) || url.origin === new URL(fallback).origin) {
+      return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
+    }
+  } catch { /* invalid or missing URL: use the server's own address */ }
+  return fallback;
+}
+
 app.post('/api/orders/checkout', requireAuth, asyncRoute(async (req, res) => {
-  const stripe = getStripeClient();
   const shipping = req.body?.shipping || {};
+  if (req.body?.paymentMethod === 'cod') {
+    const order = await reserveOrder(req.body, req.user.id, shipping.name, 'cod');
+    return res.status(201).json({ id: order.id, status: order.status, paymentMethod: 'cod' });
+  }
+
+  const stripe = getStripeClient();
   const order = await reserveOrder(req.body || {}, req.user.id, shipping.name);
   let session;
   try {
-    const baseUrl = String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:8123').replace(/\/+$/, '');
+    const baseUrl = paymentReturnUrl(req.body?.returnUrl);
     session = await stripe.checkout.sessions.create({
       mode: 'payment',
       client_reference_id: String(order.id),
@@ -445,6 +462,10 @@ app.post('/api/orders/checkout', requireAuth, asyncRoute(async (req, res) => {
 app.post('/api/orders/:id/cancel-payment', requireAuth, asyncRoute(async (req, res) => {
   const order = await getOrderForUser(req.params.id, req.user.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (order.status === 'cod_pending') {
+    await markOrderCancelled(order.id, req.user.id);
+    return res.json({ status: 'cancelled' });
+  }
   if (order.status !== 'pending_payment' || !order.stripeSessionId) {
     return res.status(409).json({ message: 'คำสั่งซื้อนี้ไม่สามารถยกเลิกการชำระเงินได้' });
   }

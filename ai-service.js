@@ -29,7 +29,7 @@ const AutoFixAI = (() => {
     deleteVehicle: (id) => request(`/api/vehicles/${id}`, { method: 'DELETE' }),
     listOrders: () => request('/api/orders'),
     getOrder: (id) => request(`/api/orders/${id}`),
-    createCheckout: (items, shipping) => post('/api/orders/checkout', { items, shipping }),
+    createCheckout: (items, shipping, paymentMethod, returnUrl) => post('/api/orders/checkout', { items, shipping, paymentMethod, returnUrl }),
     cancelCheckout: (id) => post(`/api/orders/${id}/cancel-payment`, {}),
     listAdminProducts: () => request('/api/admin/products'),
     createProduct: (product) => post('/api/admin/products', product),

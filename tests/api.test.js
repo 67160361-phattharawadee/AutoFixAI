@@ -146,6 +146,33 @@ test('HTTP API protects admin inventory and fails closed when Stripe is not conf
     const orders = await (await fetch(`${baseUrl}/api/admin/orders`, { headers: adminHeaders })).json();
     assert.equal(orders.length, 0);
     assert.equal((await (await fetch(`${baseUrl}/api/products/${product.id}`)).json()).stockQuantity, 3);
+
+    // Cash on delivery works without Stripe, reserves stock, and can be cancelled until the shop starts packing
+    const customerHeaders = { Authorization: `Bearer ${customer.token}`, 'Content-Type': 'application/json' };
+    const codBody = (quantity) => JSON.stringify({
+      paymentMethod: 'cod',
+      items: [{ id: product.id, quantity }],
+      shipping: { name: 'COD Buyer', email: 'cod@example.com', phone: '0812345678', address: '99 COD Road', city: 'Bangkok', province: 'Bangkok', postalCode: '10100' }
+    });
+    const codResponse = await fetch(`${baseUrl}/api/orders/checkout`, { method: 'POST', headers: customerHeaders, body: codBody(2) });
+    assert.equal(codResponse.status, 201);
+    const codOrder = await codResponse.json();
+    assert.equal(codOrder.status, 'cod_pending');
+    assert.equal((await (await fetch(`${baseUrl}/api/products/${product.id}`)).json()).stockQuantity, 1);
+
+    const codCancel = await fetch(`${baseUrl}/api/orders/${codOrder.id}/cancel-payment`, { method: 'POST', headers: customerHeaders, body: '{}' });
+    assert.equal(codCancel.status, 200);
+    assert.equal((await (await fetch(`${baseUrl}/api/products/${product.id}`)).json()).stockQuantity, 3);
+
+    const secondCod = await (await fetch(`${baseUrl}/api/orders/checkout`, { method: 'POST', headers: customerHeaders, body: codBody(1) })).json();
+    for (const status of ['processing', 'shipped', 'completed']) {
+      const advance = await fetch(`${baseUrl}/api/admin/orders/${secondCod.id}/status`, { method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ status }) });
+      assert.equal(advance.status, 200);
+      assert.equal((await advance.json()).paymentMethod, 'cod');
+    }
+    const lateCancel = await fetch(`${baseUrl}/api/orders/${secondCod.id}/cancel-payment`, { method: 'POST', headers: customerHeaders, body: '{}' });
+    assert.equal(lateCancel.status, 409);
+    assert.equal((await (await fetch(`${baseUrl}/api/products/${product.id}`)).json()).stockQuantity, 2);
   } catch (error) {
     startupError = error;
     throw error;

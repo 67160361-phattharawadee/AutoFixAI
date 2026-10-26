@@ -204,6 +204,7 @@ async function initializeDatabase() {
       tax_policy TEXT NOT NULL DEFAULT 'legacy_unverified',
       stripe_session_id TEXT,
       payment_intent_id TEXT,
+      payment_method TEXT NOT NULL DEFAULT 'stripe',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -216,6 +217,7 @@ async function initializeDatabase() {
   if (!orderColumns.some((column) => column.name === 'tax_policy')) await run("ALTER TABLE orders ADD COLUMN tax_policy TEXT NOT NULL DEFAULT 'legacy_unverified'");
   if (!orderColumns.some((column) => column.name === 'stripe_session_id')) await run('ALTER TABLE orders ADD COLUMN stripe_session_id TEXT');
   if (!orderColumns.some((column) => column.name === 'payment_intent_id')) await run('ALTER TABLE orders ADD COLUMN payment_intent_id TEXT');
+  if (!orderColumns.some((column) => column.name === 'payment_method')) await run("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'stripe'");
 
   const userColumns = await all('PRAGMA table_info(users)');
   if (!userColumns.some((column) => column.name === 'role')) await run("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
@@ -531,12 +533,16 @@ function orderFromRow(row) {
     shippingFeeThb: Number(row.shipping_fee_thb || 0),
     taxPolicy: row.tax_policy || 'legacy_unverified',
     status: row.status,
+    paymentMethod: row.payment_method || 'stripe',
     createdAt: row.created_at,
     paymentIntentId: row.payment_intent_id || null
   };
 }
 
-async function reserveOrder(order, userId, userName) {
+async function reserveOrder(order, userId, userName, paymentMethod = 'stripe') {
+  if (!['stripe', 'cod'].includes(paymentMethod)) throw new Error('วิธีชำระเงินไม่ถูกต้อง');
+  // Cash on delivery skips online payment, so the order goes straight to the shipping queue
+  const status = paymentMethod === 'cod' ? 'cod_pending' : 'pending_payment';
   if (!Array.isArray(order.items) || !order.items.length) throw new Error('รถเข็นยังว่าง');
   const storeSettings = await getStoreSettings();
   if (!storeSettings.configured) throw new Error('ร้านยังไม่ได้ตั้งค่านโยบายค่าส่งและภาษี');
@@ -581,10 +587,10 @@ async function reserveOrder(order, userId, userName) {
     const shippingFeeThb = storeSettings.shippingFeeThb;
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0) + shippingFeeThb;
     const result = await runTx(
-      'INSERT INTO orders (total, user_name, items_json, user_id, status, shipping_json, shipping_fee_thb, tax_policy) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [total, String(userName), JSON.stringify(items), String(userId), 'pending_payment', JSON.stringify(shipping), shippingFeeThb, storeSettings.taxPolicy]
+      'INSERT INTO orders (total, user_name, items_json, user_id, status, shipping_json, shipping_fee_thb, tax_policy, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [total, String(userName), JSON.stringify(items), String(userId), status, JSON.stringify(shipping), shippingFeeThb, storeSettings.taxPolicy, paymentMethod]
     );
-    return { id: result.id, total, userName, userId: String(userId), items, shipping, shippingFeeThb, taxPolicy: storeSettings.taxPolicy, status: 'pending_payment' };
+    return { id: result.id, total, userName, userId: String(userId), items, shipping, shippingFeeThb, taxPolicy: storeSettings.taxPolicy, status, paymentMethod };
   });
 }
 
@@ -633,7 +639,7 @@ async function releaseOrderBySession(sessionId, finalStatus = 'expired') {
 
 async function markOrderCancelled(orderId, userId) {
   return withTransaction(async ({ run: runTx, get: getTx }) => {
-    const row = await getTx("SELECT id, items_json FROM orders WHERE id = ? AND user_id = ? AND status = 'pending_payment'", [Number(orderId), String(userId)]);
+    const row = await getTx("SELECT id, items_json FROM orders WHERE id = ? AND user_id = ? AND status IN ('pending_payment', 'cod_pending')", [Number(orderId), String(userId)]);
     if (!row) return false;
     for (const item of JSON.parse(row.items_json || '[]')) {
       await runTx('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?', [Number(item.quantity), Number(item.id)]);
@@ -644,7 +650,7 @@ async function markOrderCancelled(orderId, userId) {
 }
 
 async function updateOrderStatus(orderId, status) {
-  const transitions = { paid: 'processing', processing: 'shipped', shipped: 'completed' };
+  const transitions = { paid: 'processing', cod_pending: 'processing', processing: 'shipped', shipped: 'completed' };
   const row = await get('SELECT status FROM orders WHERE id = ?', [Number(orderId)]);
   if (!row) return null;
   if (transitions[row.status] !== status) throw new Error('Invalid order status transition');
