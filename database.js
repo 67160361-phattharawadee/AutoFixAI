@@ -239,6 +239,9 @@ async function initializeDatabase() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  // Every garage/maintenance read is "WHERE user_id = ?", so index that column
+  await run('CREATE INDEX IF NOT EXISTS idx_vehicles_user ON vehicles(user_id)');
+  await run('CREATE INDEX IF NOT EXISTS idx_maintenance_user_date ON maintenance_records(user_id, service_date DESC)');
 
   await run(`
     CREATE TABLE IF NOT EXISTS store_settings (

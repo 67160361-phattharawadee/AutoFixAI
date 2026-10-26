@@ -168,8 +168,12 @@ function home() {
   </div>`;
 }
 
+function matchProducts(query = '') {
+  return PRODUCTS.filter((p) => !query || `${p.name} ${p.brand} ${p.partNumber} ${p.category}`.toLowerCase().includes(query.toLowerCase()));
+}
+
 function shop(query = '') {
-  const list = PRODUCTS.filter((p) => !query || `${p.name} ${p.category}`.toLowerCase().includes(query.toLowerCase()));
+  const list = matchProducts(query);
   return `<div class="page"><div class="section-head"><div><span class="eyebrow">PARTS CATALOG</span><h1>อะไหล่ทั้งหมด</h1><p class="muted">${list.length} รายการในแค็ตตาล็อก</p></div><form class="search-box" id="shopSearch"><input value="${esc(query)}" placeholder="ค้นหาสินค้า..." /><button class="button">ค้นหา</button></form></div>${storeStatusNotice()}<div class="grid">${list.length ? list.map(productCard).join('') : '<div class="empty" style="grid-column:1/-1">ไม่พบสินค้า ลองบอกอาการรถกับ AI Mechanic</div>'}</div></div>`;
 }
 
@@ -362,7 +366,14 @@ function bind() {
 
   document.getElementById('searchForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const query = document.getElementById('mainSearch')?.value || '';
+    const query = (document.getElementById('mainSearch')?.value || '').trim();
+    // Hero search accepts symptoms too: no catalog match means hand it to SmartFit AI
+    if (query && !matchProducts(query).length) {
+      state.symptoms = query;
+      openModal(finderModal());
+      document.getElementById('finderForm')?.requestSubmit();
+      return;
+    }
     location.hash = '#shop';
     setTimeout(() => {
       document.getElementById('app').innerHTML = shop(query);

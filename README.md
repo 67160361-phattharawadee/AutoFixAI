@@ -1,45 +1,258 @@
 # AutoFixAI
 https://autofixai-store-ld50.onrender.com
-## Run with Docker Desktop
 
-Copy `.env.example` to `.env` once, then set a random `SESSION_SECRET`, your Stripe secret key, Stripe webhook secret, and a private admin email/password (at least 12 characters). Keep `.env` private; never send these keys in chat or commit the file.
+AutoFixAI เป็นแอปพลิเคชันเว็บสำหรับร้านค้าออนไลน์ด้านอะไหล่รถยนต์และบริการดูแลยานยนต์ที่พัฒนาขึ้นเพื่ออำนวยความสะดวกในการเลือกซื้อสินค้า การจัดการสต็อก การตรวจสอบคำสั่งซื้อ และการชำระเงินผ่าน Stripe ในหนึ่งแพลตฟอร์ม
 
-For local Stripe testing, use a Stripe test secret key and run Stripe CLI in a second terminal:
+โปรเจคนี้ออกแบบมาเพื่อให้ทั้งลูกค้าและผู้ดูแลร้านสามารถทำงานบนระบบเดียวกัน โดยมีฟังก์ชันหลักดังนี้:
+- แสดงสินค้าและรายการอะไหล่สำหรับรถยนต์
+- ระบบตะกร้าสินค้าและการสั่งซื้อออนไลน์
+- บันทึกข้อมูลรถของลูกค้าในส่วน Garage
+- จัดการคำสั่งซื้อและสถานะการจัดส่ง
+- จัดการร้านสำหรับผู้ดูแลระบบ
+- ชำระเงินออนไลน์ผ่าน Stripe Checkout
+- ตัวช่วยวินิจฉัยปัญหารถเบื้องต้นด้วย Logic แบบ rule-based
 
-```powershell
-stripe listen --forward-to localhost:8123/api/payments/stripe/webhook
+---
+
+## ภาพรวมของระบบ
+
+AutoFixAI เป็นโปรเจคแบบ full-stack ที่ใช้ภาษา JavaScript และมีการรวมส่วน frontend และ backend ในเดียวกัน ได้แก่:
+- Node.js และ Express.js สำหรับการสร้าง API และเว็บแอปพลิเคชัน
+- SQLite สำหรับการจัดเก็บข้อมูลผู้ใช้ สินค้า รถยนต์ คำสั่งซื้อ และการตั้งค่าร้าน
+- Stripe สำหรับกระบวนการชำระเงินออนไลน์
+- HTML, CSS และ JavaScript สำหรับหน้า storefront และหน้า admin
+- Docker สำหรับการรันแอปพลิเคชันในรูปแบบ container
+
+แนวคิดหลักของโปรเจคคือการสร้างศูนย์กลางการบริหารร้านค้าออนไลน์สำหรับอะไหล่รถยนต์ โดยให้ผู้ดูแลร้านสามารถจัดการสินค้าคงคลังและติดตามคำสั่งซื้อได้จากหน้าจัดการเดียว
+
+---
+
+## วัตถุประสงค์ของโปรเจค
+
+- ปรับปรุงประสบการณ์การซื้ออะไหล่รถยนต์ให้สะดวกและรวดเร็วขึ้น
+- จัดการข้อมูลสินค้าคงคลังและคำสั่งซื้อด้วยระบบที่เรียบง่าย
+- รองรับการชำระเงินออนไลน์แบบปลอดภัยผ่าน Stripe
+- ให้ผู้ดูแลร้านสามารถจัดการสินค้าทุกอย่างได้จาก dashboard เดียว
+- เป็นต้นแบบแอปพลิเคชัน e-commerce สำหรับอุตสาหกรรมยานยนต์
+
+---
+
+## ฟีเจอร์หลัก
+
+### 1. Storefront สำหรับลูกค้า
+- แสดงรายการสินค้าและรายละเอียดสินค้า
+- เพิ่มสินค้าลงตะกร้า
+- กรอกข้อมูลการจัดส่งพร้อมกับข้อมูลรถยนต์
+- ตรวจทานคำสั่งซื้อก่อนชำระเงิน
+- เริ่มกระบวนการชำระเงินผ่าน Stripe
+
+### 2. ระบบบัญชีผู้ใช้
+- ลงทะเบียนเข้าระบบ
+- เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+- แบ่งบทบาทเป็น customer และ admin
+- เพิ่มความปลอดภัยให้กับการเข้าถึงข้อมูลที่สำคัญ
+
+### 3. Garage Management
+- บันทึกข้อมูลรถของลูกค้า เช่น ยี่ห้อ รุ่น ปี และเลขไมล์
+- จัดเก็บประวัติรถเพื่อใช้ในการเลือกซื้อสินค้าและบริการที่เหมาะสม
+
+### 4. Inventory และ Product Management
+- เพิ่มสินค้าใหม่
+- ปรับราคาและจำนวนพร้อมขาย
+- ตรวจสอบสต็อกสินค้าแบบ real-time
+- จัดการคำสั่งซื้อที่ชำระเงินและรอการจัดส่ง
+
+### 5. Order Processing
+- คำสั่งซื้อมีสถานะต่าง ๆ ตามความคืบหน้า
+- ระบบจัดเก็บข้อมูลการจัดส่งของลูกค้า
+- รองรับการติดตามคำสั่งซื้อภายในระบบ
+
+### 6. Payment Integration
+- ใช้ Stripe Checkout สำหรับการชำระเงิน
+- จองสต็อกสินค้าไว้ชั่วคราวก่อนชำระเงิน
+- ตรวจสอบการชำระเงินผ่าน webhook
+- ปล่อยสต็อกกลับเมื่อคำสั่งซื้อหมดอายุหรือถูกยกเลิก
+
+### 7. AI Assistant สำหรับการวินิจฉัยเบื้องต้น
+- มีระบบที่ช่วยแนะนำชิ้นส่วนที่อาจเกี่ยวข้องกับอาการของรถ เช่น เบรก แอร์ และระบบสตาร์ท
+- เป็น logic แบบ demo และไม่ได้เป็น AI model จริงที่ใช้สำหรับการวิเคราะห์ภาพหรือการประมวลผลอัตโนมัติเต็มรูปแบบ
+
+---
+
+## เทคโนโลยีและเครื่องมือที่ใช้
+
+- Node.js
+- Express.js
+- SQLite
+- Stripe API
+- HTML
+- CSS
+- JavaScript
+- dotenv
+- Docker
+
+---
+
+## โครงสร้างโปรเจค
+
+```text
+AutoFixAI/
+├── .env.example
+├── .env
+├── README.md
+├── app.js
+├── ai-service.js
+├── database.js
+├── server.js
+├── package.json
+├── style.css
+├── build-static.js
+├── Dockerfile
+├── api.Dockerfile
+├── docker-compose.yml
+├── data/
+│   └── autofix.db
+├── tests/
+│   ├── api.test.js
+│   └── database.test.js
+├── nginx/
+└── node_modules/
 ```
 
-Copy the CLI's `whsec_...` value into `STRIPE_WEBHOOK_SECRET` in `.env`, then start the app from PowerShell:
+ไฟล์สำคัญของโปรเจค:
+- `server.js` — เป็นจุดเริ่มต้นของแอปพลิเคชันและ API
+- `database.js` — ประกอบด้วย schema การจัดเก็บข้อมูลและฟังก์ชันสำหรับติดต่อ SQLite
+- `app.js` — ส่วน frontend สำหรับ storefront และ admin page
+- `ai-service.js` — ฟังก์ชันสำหรับการเรียก API และประมวลผลข้อมูลเชิงธุรกิจ
+- `tests/` — ไฟล์การทดสอบสำหรับฐานข้อมูลและ API
+- `data/autofix.db` — ฐานข้อมูล SQLite ที่สร้างขึ้นระหว่างการรันแอป
+
+---
+
+## การติดตั้งและรันโปรเจค
+
+### ข้อกำหนดเบื้องต้น
+- Node.js เวอร์ชัน 20 ขึ้นไป
+- npm
+- Docker (หากต้องการรันในรูปแบบ container)
+
+### 1. Clone โปรเจค
+
+```bash
+git clone https://github.com/67160361-phattharawadee/AutoFixAI.git
+cd AutoFixAI
+```
+
+### 2. ติดตั้ง dependencies
+
+```bash
+npm install
+```
+
+### 3. ตั้งค่า environment variables
+
+ทำสำเนาไฟล์ `.env.example` ไปเป็น `.env` และปรับค่าให้เหมาะสมกับสภาพแวดล้อมของคุณ
+
+```bash
+copy .env.example .env
+```
+
+ตัวอย่างค่าที่ควรมีใน `.env`:
+
+```env
+SESSION_SECRET=your-random-secret
+PUBLIC_BASE_URL=http://localhost:8123
+ADMIN_EMAIL=admin@yourstore.com
+ADMIN_PASSWORD=your-strong-password
+STORE_SHIPPING_FEE_THB=0
+STORE_TAX_POLICY=included
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_webhook_signing_secret
+```
+
+> ควรเก็บค่า `.env` ไว้เป็นความลับ และไม่ควรเผยแพร่ลงใน Git หรือส่งผ่านช่องทางสื่อสารที่เปิดเผยต่อสาธารณะ
+
+### 4. รันโปรเจคแบบไม่ใช้ Docker
+
+```powershell
+$env:PORT = '8123'
+npm start
+```
+
+เปิดเบราว์เซอร์ที่:
+
+```text
+http://localhost:8123/
+```
+
+### 5. รันโปรเจคแบบใช้ Docker
 
 ```powershell
 docker compose up --build -d
 ```
 
-Open <http://localhost:8123/>. The web container proxies `/api/*` to the API service. Check startup with `docker compose ps` and `docker compose logs -f api`.
+จากนั้นเปิด URL เดียวกัน:
 
-The store-admin account is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD` at API startup; the public signup form cannot claim that email. The configured password is reset to the `.env` value at each startup. Store defaults are free shipping and prices include tax, matching the current owner selection; they can be changed in **จัดการร้าน**. Enter real product prices and available quantities or create products before selling. New/migrated products start at zero stock. Admin can advance paid orders through preparation, shipped, and completed.
-
-For live payments, use Stripe live keys, set `PUBLIC_BASE_URL` to the public HTTPS site, configure the Stripe webhook endpoint as `https://your-domain/api/payments/stripe/webhook`, and put its signing secret in `.env`. Both Stripe keys are mandatory before checkout is enabled. Restart with `docker compose up --build -d` after changing environment values. Stripe enables payment methods according to the merchant account and Dashboard configuration.
-
-## Run without Docker
-
-Install Node.js 20 or newer, then run:
-
-```powershell
-npm install
-$env:PORT = '8123'
-npm start
+```text
+http://localhost:8123/
 ```
 
-Open <http://localhost:8123/>. The server creates and seeds `data/autofix.db` on first start. Run `npm run check` for JavaScript syntax checks and `npm test` for database/API integration tests.
+---
 
-The seeded demo account is `demo@autofix.com` with password `AutoFix123!` and has customer permissions. The store admin is a separate account initialized from `.env`. Change or remove the demo credentials before deploying publicly.
+## การทำงานของระบบชำระเงิน
 
-## What is connected
+ระบบชำระเงินของ AutoFixAI ถูกออกแบบให้ทำงานตามลำดับต่อไปนี้:
+1. ลูกค้าทำการเลือกสินค้าและเข้าสู่กระบวนการสั่งซื้อ
+2. ระบบตรวจสอบความพร้อมของสินค้าและจองสต็อกไว้ชั่วคราว
+3. สร้าง Stripe Checkout Session สำหรับการชำระเงิน
+4. ลูกค้าเริ่มชำระเงินผ่าน Stripe
+5. Stripe ส่ง webhook กลับมายัง `/api/payments/stripe/webhook`
+6. ระบบตรวจสอบ signature ของ webhook และอัปเดตสถานะคำสั่งซื้อ
+7. หากคำสั่งซื้อหมดอายุหรือถูกยกเลิก สต็อกจะถูกปล่อยคืนให้พร้อมสำหรับการขายอีกครั้ง
 
-Products, accounts, garage vehicles, orders, inventory, and maintenance records are persisted in SQLite. Authenticated endpoints use signed bearer tokens. Checkout reserves stock transactionally, calculates totals from database prices, and creates a Stripe Checkout Session. Only a signature-verified Stripe webhook marks an order paid; expired or cancelled sessions release reserved stock. Admin inventory and fulfillment endpoints require the admin role.
+การเปิดใช้งานชำระเงินจะเกิดขึ้นได้ก็ต่อเมื่อมีการกำหนด `STRIPE_SECRET_KEY` และ `STRIPE_WEBHOOK_SECRET` ในไฟล์ `.env` แล้วเท่านั้น
 
-Stripe keys and saved store policy are required for checkout. The backend calculates item prices and the configured shipping fee; it does not calculate tax separately. The admin must choose whether tax is already included in listed prices or not applicable, according to the shop's actual tax obligations. The application records shipping addresses and fulfillment status but does not create shipping labels, integrate a carrier, or process refunds. Orders created before this payment integration are marked `legacy_unverified` and must not be treated as paid.
+---
 
-The symptom helper is rule-based demo logic. Image identification returns sample brake-part matches and is not a real vision model. Shipping fulfillment remains manual after the admin marks the paid order as shipped.
+## การทดสอบ
+
+โปรเจคมีการทดสอบพื้นฐานสำหรับการตรวจสอบความถูกต้องของฐานข้อมูลและ API โดยสามารถรันคำสั่งต่อไปนี้ได้:
+
+```bash
+npm run check
+npm test
+```
+
+คำสั่งดังกล่าวใช้สำหรับตรวจสอบความถูกต้องของ JavaScript syntax และการทำงานของฐานข้อมูล/REST API ในระดับพื้นฐาน
+
+### CI/CD (GitHub Actions)
+
+ไฟล์ `.github/workflows/deploy.yml` มี 2 job:
+1. **test** — รันทุกครั้งที่ push หรือเปิด Pull Request เข้า `main`: `npm ci` → `npm run check` → `npm test`
+2. **deploy** — รันหลัง test ผ่านเท่านั้น (`needs: test`) และเฉพาะตอน push: build ไฟล์ static ลง `dist/` แล้ว deploy ขึ้น GitHub Pages
+
+ฝั่ง backend ใช้ `render.yaml` ให้ Render build จาก `api.Dockerfile` ใหม่อัตโนมัติทุก commit และตรวจ `/api/health`
+
+---
+
+## ข้อควรทราบ
+
+- ไฟล์ `.env` เป็นข้อมูลที่ต้องเก็บเป็นความลับอย่างเข้มงวด
+- สำหรับการพัฒนา ควรใช้งาน Stripe ในโหมดทดสอบ (test mode)
+- ระบบ AI ที่ใช้ในโปรเจคนี้เป็นรูปแบบ rule-based สำหรับการช่วยวินิจฉัยเบื้องต้นเท่านั้น
+- ฟังก์ชันการจัดส่งยังเป็นไปตามขั้นตอนแบบ manual ภายหลังจากผู้ดูแลตรวจสอบว่าคำสั่งซื้อได้รับชำระเงินแล้ว
+- โปรเจคนี้เหมาะสำหรับการพัฒนา MVP หรือแอปพลิเคชันต้นแบบมากกว่าระบบอีคอมเมิร์ซเต็มรูปแบบ
+
+---
+
+## สรุป
+
+AutoFixAI เป็นแอปพลิเคชันต้นแบบสำหรับร้านค้าอะไหล่รถยนต์ที่นำรวมฟังก์ชันด้าน e-commerce, inventory management, order handling, customer data, และ payment processing เข้าด้วยกันในระบบเดียว
+
+โปรเจคนี้มีความเหมาะสมสำหรับการพัฒนาเป็นสื่อกลางการเรียนรู้หรือผลงานต้นแบบด้านธุรกิจดิจิทัลสำหรับอุตสาหกรรมยานยนต์ และสามารถพัฒนาให้มีความครบถ้วนยิ่งขึ้นในด้านการจัดส่ง การจัดการคลังสินค้า และการบูรณาการระบบภายนอกต่าง ๆ ต่อไปได้
+
+---
+
+## License
+
+โปรเจคนี้ถูกสร้างขึ้นสำหรับการพัฒนาและทดลองใช้งานในสภาพแวดล้อม local หรือการใช้งานต้นแบบ โดยไม่ได้ระบุสัญญาเผยแพร่แบบชัดเจนใน README นี้ หากต้องการนำไปใช้งานเชิงพาณิชย์หรือเผยแพร่ต่อสาธารณะ ควรตรวจสอบเงื่อนไขการใช้งานและความเหมาะสมก่อนดำเนินการ deploy อย่างเป็นทางการ
